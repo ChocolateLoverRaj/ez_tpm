@@ -1,6 +1,13 @@
-use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
+use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes, KnownLayout, Unaligned};
 
 use crate::{Command, CommandHeader, ResponseHeader, TPM_ST_NO_SESSIONS};
+
+#[derive(Debug, Immutable, Unaligned, IntoBytes)]
+#[repr(C)]
+struct GetRandomCommand {
+    header: CommandHeader,
+    parameters: GetRandomParameters,
+}
 
 #[derive(Debug, Immutable, Unaligned, IntoBytes)]
 #[repr(C)]
@@ -8,13 +15,20 @@ struct GetRandomParameters {
     bytes_requested: [u8; 2],
 }
 
-#[derive(Debug, Immutable, KnownLayout, FromBytes)]
+#[derive(Debug, Immutable, KnownLayout, FromBytes, IntoBytes, Unaligned)]
 #[repr(C)]
 pub struct GetRandomResponse<const N: usize> {
+    header: ResponseHeader,
+    parameters: GetRandomResponseParameters<N>,
+}
+
+#[derive(Debug, Immutable, KnownLayout, FromBytes, IntoBytes, Unaligned)]
+#[repr(C)]
+pub struct GetRandomResponseParameters<const N: usize> {
     random_bytes: Tpm2bDigest<N>,
 }
 
-#[derive(Debug, Immutable, KnownLayout, FromBytes)]
+#[derive(Debug, Immutable, KnownLayout, FromBytes, IntoBytes, Unaligned)]
 #[repr(C)]
 pub struct Tpm2bDigest<const N: usize> {
     size: [u8; 2],
@@ -26,36 +40,26 @@ const N: usize = 16;
 /// This command supports a variable number of random bytes to generate.
 /// However, currently it is hard-coded to 16 because Rust doesn't support `size_of` with generics.
 pub struct GetRandom {
-    input: [u8; size_of::<CommandHeader>() + size_of::<GetRandomParameters>()],
-    output: [u8; size_of::<ResponseHeader>() + size_of::<GetRandomResponse<N>>()],
+    input: GetRandomCommand,
+    output: GetRandomResponse<N>,
 }
 
 impl GetRandom {
     pub fn new() -> Self {
         Self {
-            input: {
-                let mut input = [Default::default();
-                    size_of::<CommandHeader>() + size_of::<GetRandomParameters>()];
-                (input[..size_of::<CommandHeader>()]).copy_from_slice(
-                    CommandHeader {
-                        tag: TPM_ST_NO_SESSIONS.to_be_bytes(),
-                        command_size: ((size_of::<CommandHeader>()
-                            + size_of::<GetRandomParameters>())
-                            as u32)
-                            .to_be_bytes(),
-                        command_code: TPM_CC_GET_RANDOM.to_be_bytes(),
-                    }
-                    .as_bytes(),
-                );
-                (input[size_of::<CommandHeader>()..]).copy_from_slice(
-                    GetRandomParameters {
-                        bytes_requested: (N as u16).to_be_bytes(),
-                    }
-                    .as_bytes(),
-                );
-                input
+            input: GetRandomCommand {
+                header: CommandHeader {
+                    tag: TPM_ST_NO_SESSIONS.to_be_bytes(),
+                    command_size: ((size_of::<CommandHeader>() + size_of::<GetRandomParameters>())
+                        as u32)
+                        .to_be_bytes(),
+                    command_code: TPM_CC_GET_RANDOM.to_be_bytes(),
+                },
+                parameters: GetRandomParameters {
+                    bytes_requested: (N as u16).to_be_bytes(),
+                },
             },
-            output: [0; size_of::<ResponseHeader>() + size_of::<GetRandomResponse<N>>()],
+            output: FromZeros::new_zeroed(),
         }
     }
 }
@@ -66,7 +70,7 @@ impl Command for GetRandom {
     type Output = [u8];
 
     fn input_and_output(&mut self) -> (&[u8], &mut [u8]) {
-        (&self.input, &mut self.output)
+        (self.input.as_bytes(), self.output.as_mut_bytes())
     }
 
     fn process_output<'a>(
@@ -74,7 +78,7 @@ impl Command for GetRandom {
         parameters: &'a mut [u8],
     ) -> &'a Self::Output {
         let _ = response_header;
-        let parameters = GetRandomResponse::<N>::ref_from_bytes(parameters).unwrap();
+        let parameters = GetRandomResponseParameters::<N>::ref_from_bytes(parameters).unwrap();
         let len = u16::from_be_bytes(parameters.random_bytes.size) as usize;
         &parameters.random_bytes.bytes[..len]
     }

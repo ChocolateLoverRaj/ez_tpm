@@ -1,10 +1,14 @@
 #![no_std]
 
+mod command_code;
 mod get_random;
+mod pcr_read;
 #[cfg(feature = "uefi")]
 pub mod uefi;
 
+use command_code::*;
 pub use get_random::*;
+pub use pcr_read::*;
 
 // Construct command input from Rust input
 // Construct output buffer
@@ -12,7 +16,7 @@ pub use get_random::*;
 // Decode output buffer's response header
 // If successful, decode the command-specific output
 
-use num_enum::TryFromPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
 pub trait Command {
@@ -53,3 +57,12 @@ pub enum ResponseCode {
 }
 
 const TPM_ST_NO_SESSIONS: u16 = 0x8001;
+
+#[repr(u16)]
+#[derive(Debug, IntoPrimitive)]
+pub enum TpmAlgId {
+    Sha1 = 0x0004,
+    Sha256 = 0x000B,
+    Sha384 = 0x000C,
+    Sha512 = 0x000D,
+}
