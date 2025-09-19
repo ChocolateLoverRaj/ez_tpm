@@ -66,17 +66,17 @@ impl GetRandom {
 
 const TPM_CC_GET_RANDOM: u32 = 0x0000017B;
 
-impl Command for GetRandom {
-    type Output = [u8];
+impl<'a> Command<'a> for GetRandom {
+    type Output = &'a [u8];
 
     fn input_and_output(&mut self) -> (&[u8], &mut [u8]) {
         (self.input.as_bytes(), self.output.as_mut_bytes())
     }
 
-    fn process_output<'a>(
+    fn process_output(
         response_header: &'a mut ResponseHeader,
         parameters: &'a mut [u8],
-    ) -> &'a Self::Output {
+    ) -> Self::Output {
         let _ = response_header;
         let parameters = GetRandomResponseParameters::<N>::ref_from_bytes(parameters).unwrap();
         let len = u16::from_be_bytes(parameters.random_bytes.size) as usize;

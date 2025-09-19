@@ -1,14 +1,32 @@
 #![no_std]
 
+mod capability;
+mod command;
 mod command_code;
+mod create;
+mod create_primary;
+mod get_capability;
 mod get_random;
 mod pcr_read;
+mod structs;
+mod tpm_ht;
+mod tpm_sts;
 #[cfg(feature = "uefi")]
 pub mod uefi;
+mod yes_no;
 
+use capability::*;
+pub use command::*;
 use command_code::*;
+pub use create::*;
+use create_primary::*;
+pub use get_capability::*;
 pub use get_random::*;
 pub use pcr_read::*;
+pub use structs::*;
+use tpm_ht::*;
+use tpm_sts::*;
+use yes_no::*;
 
 // Construct command input from Rust input
 // Construct output buffer
@@ -19,31 +37,15 @@ pub use pcr_read::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
-pub trait Command {
-    type Output: ?Sized;
+pub trait Command<'a> {
+    type Output;
 
     fn input_and_output(&mut self) -> (&[u8], &mut [u8]);
     /// Note that this function can be called if there is a command-specific error.
-    fn process_output<'a>(
+    fn process_output(
         response_header: &'a mut ResponseHeader,
         parameters: &'a mut [u8],
-    ) -> &'a Self::Output;
-}
-
-#[repr(C)]
-#[derive(Debug, Immutable, IntoBytes, Unaligned, FromBytes, KnownLayout)]
-struct CommandHeader {
-    tag: [u8; 2],
-    command_size: [u8; 4],
-    command_code: [u8; 4],
-}
-
-#[repr(C)]
-#[derive(Debug, KnownLayout, Immutable, Unaligned, FromBytes, IntoBytes)]
-pub struct ResponseHeader {
-    tag: [u8; 2],
-    response_size: [u8; 4],
-    response_code: [u8; 4],
+    ) -> Self::Output;
 }
 
 const RC_WARN: u32 = 0x900;
@@ -55,8 +57,6 @@ const RC_WARN: u32 = 0x900;
 pub enum ResponseCode {
     TpmRcCanceled = RC_WARN + 0x009,
 }
-
-const TPM_ST_NO_SESSIONS: u16 = 0x8001;
 
 #[repr(u16)]
 #[derive(Debug, IntoPrimitive)]

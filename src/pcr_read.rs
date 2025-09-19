@@ -93,7 +93,7 @@ impl PcrRead {
                         + size_of::<PcrReadParameters<N_ALGORITHMS, N_PCR_BITMAP_BYTES>>())
                         as u32)
                         .to_be_bytes(),
-                    command_code: u32::from(TpmCommandCode::PcrRead).to_be_bytes(),
+                    command_code: TPM_CC_PCR_READ.to_be_bytes(),
                 },
                 parameters: PcrReadParameters {
                     pcr_selection_in: TpmlPcrSelection {
@@ -115,17 +115,17 @@ impl PcrRead {
     }
 }
 
-impl Command for PcrRead {
-    type Output = [u8; 20];
+impl<'a> Command<'a> for PcrRead {
+    type Output = &'a [u8; 20];
 
     fn input_and_output(&mut self) -> (&[u8], &mut [u8]) {
         (self.input.as_bytes(), self.output.as_mut_bytes())
     }
 
-    fn process_output<'a>(
+    fn process_output(
         response_header: &'a mut ResponseHeader,
         parameters: &'a mut [u8],
-    ) -> &'a Self::Output {
+    ) -> Self::Output {
         let _ = response_header;
         let parameters = PcrReadResponseParameters::<
             N_ALGORITHMS,

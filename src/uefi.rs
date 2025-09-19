@@ -9,10 +9,10 @@ pub enum SubmitCommandError {
     TpmError(ResponseCode),
 }
 
-pub fn submit_command<'a, C: Command>(
+pub fn submit_command<'a, C: Command<'a>>(
     tcg: &mut Tcg,
     command: &'a mut C,
-) -> Result<&'a C::Output, SubmitCommandError> {
+) -> Result<C::Output, SubmitCommandError> {
     let (input, output) = command.input_and_output();
     tcg.submit_command(input, output)
         .map_err(SubmitCommandError::UefiError)?;
