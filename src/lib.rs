@@ -9,8 +9,11 @@ mod get_capability;
 mod get_random;
 mod pcr_read;
 mod structs;
+mod tpm_alg_id;
 mod tpm_ht;
+mod tpm_rh;
 mod tpm_sts;
+mod tpma_object;
 #[cfg(feature = "uefi")]
 pub mod uefi;
 mod yes_no;
@@ -19,13 +22,16 @@ use capability::*;
 pub use command::*;
 use command_code::*;
 pub use create::*;
-use create_primary::*;
+pub use create_primary::*;
 pub use get_capability::*;
 pub use get_random::*;
 pub use pcr_read::*;
 pub use structs::*;
+use tpm_alg_id::*;
 use tpm_ht::*;
+use tpm_rh::*;
 use tpm_sts::*;
+use tpma_object::*;
 use yes_no::*;
 
 // Construct command input from Rust input
@@ -36,17 +42,6 @@ use yes_no::*;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
-
-pub trait Command<'a> {
-    type Output;
-
-    fn input_and_output(&mut self) -> (&[u8], &mut [u8]);
-    /// Note that this function can be called if there is a command-specific error.
-    fn process_output(
-        response_header: &'a mut ResponseHeader,
-        parameters: &'a mut [u8],
-    ) -> Self::Output;
-}
 
 const RC_WARN: u32 = 0x900;
 

@@ -15,23 +15,6 @@ struct PcrReadParameters<const N_ALGORITHMS: usize, const N_PCR_BITMAP_BYTES: us
     pcr_selection_in: TpmlPcrSelection<N_ALGORITHMS, N_PCR_BITMAP_BYTES>,
 }
 
-#[derive(Debug, KnownLayout, Immutable, Unaligned, FromBytes, IntoBytes)]
-#[repr(C)]
-struct TpmlPcrSelection<const N_ALGORITHMS: usize, const N_PCR_BITMAP_BYTES: usize> {
-    count: [u8; 4],
-    pcr_selections: [TpmsPcrSelection<N_PCR_BITMAP_BYTES>; N_ALGORITHMS],
-}
-
-#[derive(Debug, KnownLayout, Immutable, Unaligned, FromBytes, IntoBytes)]
-#[repr(C)]
-struct TpmsPcrSelection<const N: usize> {
-    hash: [u8; 2],
-    /// Size in bytes of the pcr_select bitmap
-    size_of_select: u8,
-    /// Bitmap of selected PCRs
-    pcr_select: [u8; N],
-}
-
 #[derive(Debug, Immutable, Unaligned, FromBytes, IntoBytes)]
 #[repr(C)]
 struct PcrReadResponse {
@@ -58,13 +41,6 @@ struct PcrReadResponseParameters<
 struct TpmlDigest<const DIGEST_BYTE_LEN: usize, const N_DIGESTS: usize> {
     count: [u8; 4],
     digests: [Tpm2bDigest<DIGEST_BYTE_LEN>; N_DIGESTS],
-}
-
-#[derive(Debug, KnownLayout, Immutable, Unaligned, FromBytes, IntoBytes)]
-#[repr(C)]
-struct Tpm2bDigest<const BYTE_LEN: usize> {
-    size: [u8; 2],
-    buffer: [u8; BYTE_LEN],
 }
 
 /// We're hardcoding this to 1 for now, so just read multiple times for multiple algorithms.

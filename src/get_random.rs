@@ -1,6 +1,6 @@
 use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes, KnownLayout, Unaligned};
 
-use crate::{Command, CommandHeader, ResponseHeader, TPM_ST_NO_SESSIONS};
+use crate::*;
 
 #[derive(Debug, Immutable, Unaligned, IntoBytes)]
 #[repr(C)]
@@ -26,13 +26,6 @@ pub struct GetRandomResponse<const N: usize> {
 #[repr(C)]
 pub struct GetRandomResponseParameters<const N: usize> {
     random_bytes: Tpm2bDigest<N>,
-}
-
-#[derive(Debug, Immutable, KnownLayout, FromBytes, IntoBytes, Unaligned)]
-#[repr(C)]
-pub struct Tpm2bDigest<const N: usize> {
-    size: [u8; 2],
-    bytes: [u8; N],
 }
 
 /// Currently this is a `const` and not a generic because Rust doesn't properly support it
@@ -80,6 +73,6 @@ impl<'a> Command<'a> for GetRandom {
         let _ = response_header;
         let parameters = GetRandomResponseParameters::<N>::ref_from_bytes(parameters).unwrap();
         let len = u16::from_be_bytes(parameters.random_bytes.size) as usize;
-        &parameters.random_bytes.bytes[..len]
+        &parameters.random_bytes.buffer[..len]
     }
 }
