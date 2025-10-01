@@ -25,7 +25,7 @@ pub struct GetRandomResponse<const N: usize> {
 #[derive(Debug, Immutable, KnownLayout, FromBytes, IntoBytes, Unaligned)]
 #[repr(C)]
 pub struct GetRandomResponseParameters<const N: usize> {
-    random_bytes: Tpm2bDigest<N>,
+    random_bytes: Tpm2Buffer<N>,
 }
 
 /// Currently this is a `const` and not a generic because Rust doesn't properly support it

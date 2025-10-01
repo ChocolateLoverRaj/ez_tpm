@@ -40,7 +40,7 @@ struct PcrReadResponseParameters<
 #[repr(C)]
 struct TpmlDigest<const DIGEST_BYTE_LEN: usize, const N_DIGESTS: usize> {
     count: [u8; 4],
-    digests: [Tpm2bDigest<DIGEST_BYTE_LEN>; N_DIGESTS],
+    digests: [Tpm2Buffer<DIGEST_BYTE_LEN>; N_DIGESTS],
 }
 
 /// We're hardcoding this to 1 for now, so just read multiple times for multiple algorithms.
@@ -65,10 +65,7 @@ impl PcrRead {
             input: PcrReadCommand {
                 header: CommandHeader {
                     tag: TPM_ST_NO_SESSIONS.to_be_bytes(),
-                    command_size: ((size_of::<CommandHeader>()
-                        + size_of::<PcrReadParameters<N_ALGORITHMS, N_PCR_BITMAP_BYTES>>())
-                        as u32)
-                        .to_be_bytes(),
+                    command_size: (size_of::<PcrReadCommand>() as u32).to_be_bytes(),
                     command_code: TPM_CC_PCR_READ.to_be_bytes(),
                 },
                 parameters: PcrReadParameters {
